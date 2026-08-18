@@ -65,3 +65,21 @@ def login():
         return jsonify({'error': 'Invalid username or password'}), 401 
 
     return jsonify({'message': 'Login successful!', 'token': user['token']}), 200
+
+
+
+@auth_bp.route('/api/logout', methods=['POST'])
+def logout():
+    # 1. Identify the user by their current token
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    if not token:
+        return jsonify({'error': 'No token provided'}), 400
+
+    # 2. Clear the token in the database to revoke access
+    conn = get_db()
+    conn.execute('UPDATE users SET token = NULL WHERE token = ?', (token,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
