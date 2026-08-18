@@ -1,0 +1,48 @@
+from flask import Blueprint, request, jsonify
+from models import get_db
+
+appointments_bp = Blueprint('appointments', __name__)
+
+
+def get_user_from_token(token):
+    conn = get_db()
+    user = conn.execute(
+        'SELECT id, username FROM users WHERE token = ?', 
+        (token,)
+    ).fetchone()
+    conn.close()
+    return user
+
+@appointments_bp.route('/api/appointments', methods=['POST'])
+def create_appointment():
+    
+    
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user = get_user_from_token(token)
+    
+    
+    if not user:
+        return jsonify({'error': 'Unauthorized. Please log in first.'}), 401
+
+    
+    data = request.get_json() or {}
+    name = data.get('name')
+    email = data.get('email')
+    date = data.get('date')
+    message = data.get('message', '') 
+
+    
+    if not name or not email or not date:
+        return jsonify({'error': 'Name, email, and date are required fields'}), 400
+
+    
+    conn = get_db()
+    conn.execute(
+        'INSERT INTO appointment (user_id, name, email, date, message) VALUES (?, ?, ?, ?, ?)',
+        (user['id'], name, email, date, message)
+    )
+    conn.commit()
+    conn.close()
+
+    
+    return jsonify({'success': True, 'message': 'Appointment booked successfully!'}), 201
